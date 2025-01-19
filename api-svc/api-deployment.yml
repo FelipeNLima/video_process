@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-deployment
+  labels:
+    app: ordersystem-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ordersystem-deployment
+  template:
+    metadata:
+      labels:
+        app: ordersystem-deployment
+    spec:
+      containers:
+        - name: order-system-api-container
+          image: viictorivo/order-ms:latest
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: api-configmap
