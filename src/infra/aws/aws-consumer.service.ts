@@ -10,26 +10,20 @@ export class SqsConsumerService implements OnModuleInit, OnModuleDestroy {
   private queueUrl: string;
   isRunning: boolean;
 
-  private readonly AWS_ACCESS_KEY_ID =
-    this.configService.get<string>('AWS_ACCESS_KEY_ID');
-  private readonly AWS_SECRET_ACCESS_KEY = this.configService.get<string>(
-    'AWS_SECRET_ACCESS_KEY',
-  );
-  private readonly AWS_REGION = this.configService.get<string>('AWS_REGION');
-  private readonly AWS_SESSION_TOKEN =
-    this.configService.get<string>('AWS_SESSION_TOKEN');
-
   constructor(
-    private videoService: VideoService,
+    private readonly videoService: VideoService,
     private readonly configService: ConfigService,
     private awsS3: AwsS3Service,
   ) {
     this.sqsClient = new SQSClient({
-      region: this.AWS_REGION,
+      region: this.configService.get<string>('AWS_REGION'),
+      endpoint: this.configService.get<string>('AWS_SQS_QUEUE'),
       credentials: {
-        accessKeyId: this.AWS_ACCESS_KEY_ID,
-        secretAccessKey: this.AWS_SECRET_ACCESS_KEY,
-        sessionToken: this.AWS_SESSION_TOKEN,
+        accessKeyId: this.configService.get<string>('AWS_ACCESS_KEY_ID'),
+        secretAccessKey: this.configService.get<string>(
+          'AWS_SECRET_ACCESS_KEY',
+        ),
+        sessionToken: this.configService.get<string>('AWS_SESSION_TOKEN'),
       },
     });
   }
@@ -75,9 +69,9 @@ export class SqsConsumerService implements OnModuleInit, OnModuleDestroy {
     const parseMessage = JSON.parse(messageBody);
     const { key } = parseMessage;
 
-    const video = await this.awsS3.getFromS3Bucket(
-      key,
+    await this.videoService.downloadAndProcessVideo(
       this.AWS_BUCKET_NAME_VIDEO,
+      key,
     );
   }
 }

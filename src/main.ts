@@ -17,7 +17,7 @@ async function bootstrap() {
   // Swagger
   await swaggerInit(app);
   // set port, listen for requests
-  const PORT = 3000;
+  const PORT = 80;
   await app.listen(PORT, () => {
     Logger.log(`Server is running on port ${PORT}.`);
   });

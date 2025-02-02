@@ -1,7 +1,7 @@
-import { SqsConsumerOrderService } from '../src/Application/services/consumerOrder.service';
-import { AwsSqsService } from '../src/Application/services/sqs.service';
-import { OrdersService } from '../src/Application/services/orders.service';
-import { SQSClient, ReceiveMessageCommand, DeleteMessageCommand } from '@aws-sdk/client-sqs';
+import { VideoService } from 'src/Application/services/video.service';
+import { SqsConsumerService } from '../aws/aws-consumer.service';
+import { AwsS3Service } from '../aws/aws-s3.service';
+import { AwsSqsService } from '../aws/aws-sqs.service';
 
 jest.mock('@aws-sdk/client-sqs', () => {
   return {
@@ -14,15 +14,15 @@ jest.mock('@aws-sdk/client-sqs', () => {
 });
 
 describe('SqsConsumerService', () => {
-  let service: SqsConsumerOrderService;
-  let mockSqsClient: jest.Mocked<SQSClient>;
+  let service: SqsConsumerService;
   let mockAwsSqsService: jest.Mocked<AwsSqsService>;
-  let mockOrdersService: jest.Mocked<OrdersService>;
+  let mockAwsS3Service: jest.Mocked<AwsS3Service>;
+  let mockService: jest.Mocked<VideoService>;
   let configService: any;
 
   beforeEach(() => {
     mockAwsSqsService = { sendMessage: jest.fn() } as any;
-    mockOrdersService = { update: jest.fn() } as any;
+    mockService = { processVideo: jest.fn() } as any;
 
     configService = {
       get: jest.fn((key: string) => {
@@ -37,12 +37,14 @@ describe('SqsConsumerService', () => {
       }),
     };
 
-    service = new SqsConsumerOrderService(mockOrdersService, configService, mockAwsSqsService);
+    service = new SqsConsumerService(configService, mockAwsS3Service);
   });
 
   it('deve iniciar o consumo de mensagens quando o módulo for iniciado', async () => {
     // Mockando o método listenToQueue para testar a inicialização sem realmente consumir mensagens
-    const listenToQueueSpy = jest.spyOn(service, 'listenToQueue').mockImplementation(async () => {});
+    const listenToQueueSpy = jest
+      .spyOn(service, 'listenToQueue')
+      .mockImplementation(async () => {});
 
     await service.onModuleInit();
 
@@ -50,14 +52,12 @@ describe('SqsConsumerService', () => {
     expect(listenToQueueSpy).toHaveBeenCalled();
   });
 
-
   it('deve não fazer nada se a mensagem não contiver status "PRONTO"', async () => {
-
     // Chamando o método listenToQueue
     await service.listenToQueue();
 
     // Verificando que não há chamadas para enviar a mensagem ou atualizar o pedido
     expect(mockAwsSqsService.sendMessage).not.toHaveBeenCalled();
-    expect(mockOrdersService.update).not.toHaveBeenCalled();
+    expect(mockService.processVideo).not.toHaveBeenCalled();
   });
 });

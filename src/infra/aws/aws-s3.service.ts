@@ -1,93 +1,74 @@
 import {
   GetObjectCommand,
-  ListObjectsV2Command,
-  ObjectCannedACL,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Readable } from 'stream';
+
 
 @Injectable()
 export class AwsS3Service {
-  s3Client: S3Client;
-
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly s3Client: S3Client,
+    private readonly configService: ConfigService,
+  ) {
     this.s3Client = new S3Client({
       region: this.configService.get<string>('AWS_REGION'),
-      endpoint: this.configService.get<string>('AWS_URL'),
+      credentials: {
+        accessKeyId: this.configService.get<string>('AWS_ACCESS_KEY_ID'),
+        secretAccessKey: this.configService.get<string>(
+          'AWS_SECRET_ACCESS_KEY',
+        ),
+        sessionToken: this.configService.get<string>('AWS_SESSION_TOKEN'),
+      },
     });
   }
 
   private readonly logger = new Logger(AwsS3Service.name);
 
   async sendToS3Bucket(fileContent: any, fileName: string, bucketName: string) {
-    // Define S3 upload parameters
-    const bucketParams = {
-      Bucket: bucketName,
-      Key: fileName, // Filename in the S3 bucket
-      Body: fileContent, // The ZIP file content
-      ContentType: 'application/zip', // MIME type for ZIP files
-      ACL: ObjectCannedACL.public_read, // Optional: Define access control
-    };
-
     try {
+      if (!fileContent || !fileName || !bucketName) {
+        throw new Error();
+      }
+      // Define S3 upload parameters
+      const bucketParams = {
+        Bucket: bucketName,
+        Key: fileName, // Filename in the S3 bucket
+        Body: fileContent, // The ZIP file content
+        ContentType: 'application/zip', // MIME type for ZIP files
+      };
+
       // Upload the ZIP file to S3
-      const data = await this.s3Client.send(new PutObjectCommand(bucketParams));
-      this.logger.log('Upload Success:', data);
-      return data;
+      await this.s3Client.send(new PutObjectCommand(bucketParams));
+      return `File uploaded successfully to ${bucketName}/${fileName}`;
     } catch (err) {
       console.error('Error uploading to S3:', err);
+      throw new Error('Upload failed');
     }
   }
 
   async getFromS3Bucket(Key: string, bucketName: string) {
-    const bucketParams = {
-      Bucket: bucketName,
-      Key,
-    };
-
     try {
+      const bucketParams = {
+        Bucket: bucketName,
+        Key,
+      };
+
       const response = await this.s3Client.send(
         new GetObjectCommand(bucketParams),
       );
 
       const { Body } = response;
 
-      return Body;
+      if (!Body) throw new Error('No video found in S3');
+
+      return Body as Readable;
     } catch (error) {
-      this.logger.error(Key + error);
-    }
-  }
-
-  async listAllObjects(bucketName: string, folderName?: string) {
-    let isTruncated = true;
-    let continuationToken = undefined;
-    const allObjects = [];
-
-    try {
-      while (isTruncated) {
-        const params = {
-          Bucket: bucketName,
-          Prefix: folderName,
-          ContinuationToken: continuationToken,
-        };
-
-        const response = await this.s3Client.send(
-          new ListObjectsV2Command(params),
-        );
-
-        response.Contents.forEach((item) => {
-          allObjects.push(item.Key);
-        });
-
-        isTruncated = response.IsTruncated;
-        continuationToken = response.NextContinuationToken;
-      }
-
-      return allObjects;
-    } catch (error) {
-      this.logger.error(error);
+      console.error('Error download to S3:', error);
+      throw new Error('Download failed');
     }
   }
 }
