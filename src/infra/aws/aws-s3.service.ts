@@ -5,8 +5,9 @@ import {
 } from '@aws-sdk/client-s3';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import * as fs from 'fs';
+import { join } from 'path';
 import { Readable } from 'stream';
-
 
 @Injectable()
 export class AwsS3Service {
@@ -64,8 +65,20 @@ export class AwsS3Service {
       const { Body } = response;
 
       if (!Body) throw new Error('No video found in S3');
+      // Save the file locally
+      const filePath = join('./uploads', Key);
+      const streamToBuffer = (stream: Readable): Promise<Buffer> => {
+        return new Promise((resolve, reject) => {
+          const chunks: any[] = [];
+          stream.on('data', (chunk) => chunks.push(chunk));
+          stream.on('end', () => resolve(Buffer.concat(chunks)));
+          stream.on('error', reject);
+        });
+      };
 
-      return Body as Readable;
+      const buffer = await streamToBuffer(Body as Readable);
+      fs.writeFileSync(filePath, buffer);
+      return filePath;
     } catch (error) {
       console.error('Error download to S3:', error);
       throw new Error('Download failed');

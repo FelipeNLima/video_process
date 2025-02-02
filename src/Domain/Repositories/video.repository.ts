@@ -23,8 +23,14 @@ export class VideoRepository {
       // Extract frames from the video
       await new Promise<void>((resolve, reject) => {
         ffmpeg(videoPath)
-          .on('end', () => resolve())
-          .on('error', reject)
+          .on('end', () => {
+            console.log(`✅ Frames extracted and saved to ${outputDir}`);
+            resolve()
+          })
+          .on('error', (err) => {
+            console.error('❌ FFmpeg Error:', err);
+            reject
+          })
           .save(`${outputDir}/frame-%04d.png`);
       });
 
@@ -38,6 +44,13 @@ export class VideoRepository {
         archive.directory(outputDir, false);
 
         archive.on('error', reject);
+        archive.on('end', () => {
+          console.log(`✅ Archive extracted and saved Zip to ${output}`);
+        })
+        archive.on('error', (err) => {
+          console.error('❌ Archive Error:', err);
+          reject
+        })
         output.on('close', () => resolve(zipPath));
 
         archive.finalize();

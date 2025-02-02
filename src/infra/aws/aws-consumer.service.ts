@@ -2,7 +2,7 @@ import { ReceiveMessageCommand, SQSClient } from '@aws-sdk/client-sqs';
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { VideoService } from 'src/Application/services/video.service';
-import { AwsS3Service } from './aws-s3.service';
+import { AwsSqsService } from './aws-sqs.service';
 
 @Injectable()
 export class SqsConsumerService implements OnModuleInit, OnModuleDestroy {
@@ -13,7 +13,7 @@ export class SqsConsumerService implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly videoService: VideoService,
     private readonly configService: ConfigService,
-    private awsS3: AwsS3Service,
+    private awsSqs: AwsSqsService,
   ) {
     this.sqsClient = new SQSClient({
       region: this.configService.get<string>('AWS_REGION'),
@@ -57,6 +57,7 @@ export class SqsConsumerService implements OnModuleInit, OnModuleDestroy {
           for (const message of response.Messages) {
             // Processa a mensagem
             await this.processMessage(message.Body);
+            await this.awsSqs.deleteMessage(this.queueUrl, message.ReceiptHandle)
           }
         }
       } catch (error) {

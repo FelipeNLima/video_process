@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import { format } from 'date-fns';
@@ -19,7 +19,7 @@ export class VideoService {
     private awsSns: AwsSnsService,
     private configService: ConfigService,
   ) {}
-
+  private readonly logger = new Logger(VideoService.name);
   private readonly AWS_BUCKET_NAME_ZIP = this.configService.get<string>(
     'AWS_BUCKET_NAME_ZIP',
   );
@@ -54,9 +54,10 @@ export class VideoService {
       s3Key,
       this.AWS_BUCKET_NAME_ZIP,
     );
-
+    this.logger.log(`✅ saved to Bucket file in .Zip`)
     // Send Key of Bucket
     await this.awsSqs.sendMessage({key: s3Key, bucketName: this.AWS_BUCKET_NAME_ZIP }, this.AWS_QUEUE_RETURN);
+    this.logger.log(`✅ send file zip in Queue`)
     // Send Email
     const params = {
       Subject: "Arquivo Zipado com sucesso",
@@ -64,6 +65,7 @@ export class VideoService {
       TopicArn: this.AWS_SNS_TOPIC_ARN,
     }
     await this.awsSns.sendEmail(params)
+    this.logger.log(`✅ send to e-mail for client`)
     return file;
   }
 
@@ -72,7 +74,7 @@ export class VideoService {
     const outputDir = join(__dirname, '..', '..', 'frames');
     const zipPath = join(__dirname, '..', '..', 'output.zip');
 
-    const {file, fileContent} = await this.videoRepository.processVideoMp4(
+    const { file, fileContent} = await this.videoRepository.processVideo(
       filePath,
       outputDir,
       zipPath
