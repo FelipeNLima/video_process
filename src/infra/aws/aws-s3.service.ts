@@ -11,8 +11,8 @@ import { Readable } from 'stream';
 
 @Injectable()
 export class AwsS3Service {
+  s3Client: S3Client
   constructor(
-    private readonly s3Client: S3Client,
     private readonly configService: ConfigService,
   ) {
     this.s3Client = new S3Client({
@@ -46,7 +46,6 @@ export class AwsS3Service {
       await this.s3Client.send(new PutObjectCommand(bucketParams));
       return `File uploaded successfully to ${bucketName}/${fileName}`;
     } catch (err) {
-      console.error('Error uploading to S3:', err);
       throw new Error('Upload failed');
     }
   }
@@ -80,7 +79,6 @@ export class AwsS3Service {
       fs.writeFileSync(filePath, buffer);
       return filePath;
     } catch (error) {
-      console.error('Error download to S3:', error);
       throw new Error('Download failed');
     }
   }

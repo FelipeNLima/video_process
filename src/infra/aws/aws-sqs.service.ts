@@ -13,6 +13,7 @@ export class AwsSqsService {
   constructor(private readonly configService: ConfigService) {
     this.sqsClient = new SQSClient({
       region: this.configService.get<string>('AWS_REGION'),
+      endpoint: this.configService.get<string>('AWS_URL'),
       credentials: {
         accessKeyId: this.configService.get<string>('AWS_ACCESS_KEY_ID'),
         secretAccessKey: this.configService.get<string>(

@@ -21,7 +21,7 @@ describe('AwsSnsService', () => {
   beforeEach(() => {
     snsClientMock = new SNSClient();
     configService = new ConfigService();
-    service = new AwsSnsService(snsClientMock, configService);  // Inject the mocked client into the service
+    service = new AwsSnsService(configService);  // Inject the mocked client into the service
   });
 
   it('should send an email via SNS', async () => {

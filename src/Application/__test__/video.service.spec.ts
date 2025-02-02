@@ -1,127 +1,182 @@
-import { S3Client } from '@aws-sdk/client-s3';
-import { SNSClient } from '@aws-sdk/client-sns';
+import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as dotenv from 'dotenv';
-import * as fs from 'fs';
+import { Test, TestingModule } from '@nestjs/testing';
+import { format } from 'date-fns';
 import { VideoRepository } from 'src/Domain/Repositories/video.repository';
 import { AwsS3Service } from 'src/infra/aws/aws-s3.service';
 import { AwsSnsService } from 'src/infra/aws/aws-sns.service';
 import { AwsSqsService } from 'src/infra/aws/aws-sqs.service';
-import { videoDto } from '../dtos/video.dto';
 import { VideoService } from '../services/video.service';
 
-
-// Mock ffmpeg
-jest.mock('fluent-ffmpeg', () => {
-  return jest.fn().mockImplementation(() => ({
-    on: jest.fn().mockImplementation((event, callback) => {
-      if (event === 'end') {
-        callback(); // Simulate 'end' event immediately
-      }
-      if (event === 'error') {
-        callback(new Error('FFmpeg error')); // Simulate 'error' event if needed
-      }
-      return this;
-    }),
-    save: jest.fn(),
-  }));
-});
-
-// Mock fs
-jest.mock('fs', () => ({
-  existsSync: jest.fn().mockReturnValue(false), // Assume outputDir does not exist
-  mkdirSync: jest.fn(),
-  readFileSync: jest.fn().mockReturnValue('mock file content'),
-  promises: {
-    readFile: jest.fn().mockResolvedValue('mocked file content'),
-  },
-  createReadStream: jest.fn().mockReturnValue('mocked stream'),
-  createWriteStream: jest.fn().mockReturnValue({
-    on: jest.fn().mockImplementation((event, cb) => {
-      if (event === 'close') cb();
-    }),
-  }),
-}));
-
-// Mock archiver
-jest.mock('archiver', () => {
-  return jest.fn().mockImplementation(() => ({
-    pipe: jest.fn(),
-    directory: jest.fn(),
-    on: jest.fn(),
-    finalize: jest.fn(),
-  }));
-});
-
-// Mock the S3Client
-jest.mock('@aws-sdk/client-s3', () => ({
-  S3Client: jest.fn().mockImplementation(() => ({
-    send: jest.fn(),
-  })),
-  PutObjectCommand: jest.fn(),
-  GetObjectCommand: jest.fn(),
-  DeleteObjectCommand: jest.fn(),
+jest.mock('crypto', () => ({
+  ...jest.requireActual('crypto'),
+  randomUUID: jest.fn(() => 'mock-uuid'),
 }));
 
 describe('VideoService', () => {
   let service: VideoService;
-  let configService: ConfigService;
-  let videoRepository: VideoRepository;
-  let awsS3: AwsS3Service; 
-  let awsSqs: AwsSqsService; 
-  let awsSns: AwsSnsService;
-  let s3ClientMock: S3Client;
-  let snsClient: SNSClient;
+  let videoRepository: jest.Mocked<VideoRepository>;
+  let awsS3: jest.Mocked<AwsS3Service>;
+  let awsSqs: jest.Mocked<AwsSqsService>;
+  let awsSns: jest.Mocked<AwsSnsService>;
+  let configService: jest.Mocked<ConfigService>;
 
-  beforeAll(() => {
-    // Set environment variables for testing
-    dotenv.config({ path: '.env' });
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        VideoService,
+        { provide: VideoRepository, useValue: { processVideo: jest.fn() } },
+        {
+          provide: AwsS3Service,
+          useValue: { sendToS3Bucket: jest.fn(), getFromS3Bucket: jest.fn() },
+        },
+        { provide: AwsSqsService, useValue: { sendMessage: jest.fn() } },
+        { provide: AwsSnsService, useValue: { sendEmail: jest.fn() } },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn((key: string) => {
+              const mockConfig = {
+                AWS_BUCKET_NAME_ZIP: 'test-bucket',
+                AWS_QUEUE_RETURN: 'test-queue',
+                AWS_SNS_TOPIC_ARN: 'test-topic-arn',
+              };
+              return mockConfig[key];
+            }),
+          },
+        },
+      ],
+    }).compile();
+
+    service = module.get<VideoService>(VideoService);
+    videoRepository = module.get(VideoRepository);
+    awsS3 = module.get(AwsS3Service);
+    awsSqs = module.get(AwsSqsService);
+    awsSns = module.get(AwsSnsService);
+    configService = module.get(ConfigService);
   });
 
-  beforeEach(() => {
-    s3ClientMock = new S3Client();
-    snsClient = new SNSClient();
-    configService = new ConfigService();
-    videoRepository = new VideoRepository();
-    awsS3 = new AwsS3Service(s3ClientMock, configService);
-    awsSqs = new AwsSqsService(configService);
-    awsSns = new AwsSnsService(snsClient, configService);
-    service = new VideoService(videoRepository, awsS3, awsSqs, awsSns, configService);
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
-  it('should process video and return zip path', async () => {
-    const mockUploadResponse = { $metadata: { httpStatusCode: 200 } };
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
 
-    // Mock the send method of S3Client
-    (s3ClientMock.send as jest.Mock).mockResolvedValueOnce(mockUploadResponse);
-
-    const mockFile: Express.Multer.File = {
-      fieldname: 'file',
-      originalname: 'video.mp4',
-      encoding: '7bit',
-      mimetype: 'video/mp4',
-      size: 1024,
-      stream: fs.createReadStream('path/to/video.mp4'),
-      destination: 'uploads/',
-      filename: 'video.mp4',
-      path: 'uploads/video.mp4',
-      buffer: Buffer.from('dummy content'),
-    };
-    const mockOutputDir = 'test/frames';
-    const mockZipPath = 'test/output.zip';
-
-    const videoDto: videoDto = {
-      file: mockFile,
-      outputDir: mockOutputDir,
-      zipPath: mockZipPath,
-    };
-
-    const zipPath = await service.processVideo(videoDto);
-
-    expect(zipPath).toBe(mockZipPath);
-    expect(fs.existsSync).toHaveBeenCalledWith(mockOutputDir);
-    expect(fs.mkdirSync).toHaveBeenCalledWith(mockOutputDir, {
-      recursive: true,
+  describe('processVideo', () => {
+    it('should throw an error if no file is uploaded', async () => {
+      await expect(
+        service.processVideo({ outputDir: '', file: null, zipPath: '' }),
+      ).rejects.toThrow('No file uploaded!');
     });
+
+    it('should throw an error for invalid file type', async () => {
+      await expect(
+        service.processVideo({
+          outputDir: '',
+          file: {
+            mimetype: 'video/avi',
+            path: '',
+            fieldname: '',
+            originalname: '',
+            encoding: '',
+            size: 0,
+            buffer: Buffer.from(''),
+            stream: null,
+            destination: '',
+            filename: '',
+          },
+          zipPath: '',
+        }),
+      ).rejects.toThrow('Invalid file type. Only MP4 files are allowed.');
+    });
+
+    it('should process video and upload zip to S3', async () => {
+      const mockVideo = {
+        outputDir: 'output',
+        zipPath: 'zipPath',
+        file: {
+          mimetype: 'video/mp4',
+          path: 'test-path',
+          fieldname: 'file',
+          originalname: 'test.mp4',
+          encoding: '7bit',
+          size: 1024,
+          buffer: Buffer.from(''),
+          stream: null,
+          destination: '',
+          filename: '',
+        },
+      };
+      const processedFile = {
+        file: 'processed-file',
+        fileContent: Buffer.from('zip-content'),
+      };
+      videoRepository.processVideo.mockResolvedValue(processedFile);
+
+      await service.processVideo(mockVideo);
+
+      expect(videoRepository.processVideo).toHaveBeenCalledWith(
+        'test-path',
+        'output',
+        'zipPath',
+      );
+      expect(awsS3.sendToS3Bucket).toHaveBeenCalledWith(
+        Buffer.from('zip-content'),
+        `file-${format(new Date(), 'dd-MM-yyyy')}-mock-uuid.zip`,
+        'test-bucket',
+      );
+      expect(awsSqs.sendMessage).toHaveBeenCalledWith(
+        { key: expect.any(String), bucketName: 'test-bucket' },
+        'test-queue',
+      );
+      expect(awsSns.sendEmail).toHaveBeenCalledWith({
+        Subject: 'Arquivo Zipado com sucesso',
+        Message: 'O seu video foi processado com sucesso',
+        TopicArn: 'test-topic-arn',
+      });
+    });
+  });
+
+  describe('downloadAndProcessVideo', () => {
+    it('should download video, process it, and upload zip to S3', async () => {
+      const mockFilePath = 'test-video.mp4';
+      awsS3.getFromS3Bucket.mockResolvedValue(mockFilePath);
+
+      const processedFile = {
+        file: 'processed-file',
+        fileContent: Buffer.from('zip-content'),
+      };
+      videoRepository.processVideo.mockResolvedValue(processedFile);
+
+      await service.downloadAndProcessVideo('test-bucket', 'test-key');
+
+      expect(awsS3.getFromS3Bucket).toHaveBeenCalledWith(
+        'test-key',
+        'test-bucket',
+      );
+      expect(videoRepository.processVideo).toHaveBeenCalled();
+      expect(awsS3.sendToS3Bucket).toHaveBeenCalledWith(
+        Buffer.from('zip-content'),
+        `file-${format(new Date(), 'dd-MM-yyyy')}-mock-uuid.zip`,
+        'test-bucket',
+      );
+      expect(awsSqs.sendMessage).toHaveBeenCalledWith(
+        { key: expect.any(String), bucketName: 'test-bucket' },
+        'test-queue',
+      );
+      expect(awsSns.sendEmail).toHaveBeenCalled();
+    });
+  });
+
+  it('should log messages', () => {
+    const loggerSpy = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+
+    service['logger'].log('Test log message');
+
+    expect(loggerSpy).toHaveBeenCalledWith('Test log message');
+
+    loggerSpy.mockRestore();
   });
 });

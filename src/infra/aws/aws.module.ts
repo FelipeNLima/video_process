@@ -1,5 +1,3 @@
-import { S3Client } from '@aws-sdk/client-s3';
-import { SNSClient } from '@aws-sdk/client-sns';
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { VideoService } from 'src/Application/services/video.service';
@@ -17,8 +15,6 @@ import { AwsSqsService } from './aws-sqs.service';
     SqsConsumerService,
     AwsSnsService,
     ConfigService,
-    S3Client,
-    SNSClient,
     VideoService,
     { provide: VideoRepository, useClass: VideoRepository },
   ],
