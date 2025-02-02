@@ -1,76 +1,58 @@
-import { ReceiveMessageCommand, SQSClient } from '@aws-sdk/client-sqs';
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Consumer } from 'sqs-consumer';
 import { VideoService } from 'src/Application/services/video.service';
-import { AwsSqsService } from './aws-sqs.service';
 
 @Injectable()
 export class SqsConsumerService implements OnModuleInit, OnModuleDestroy {
-  private sqsClient: SQSClient;
-  private queueUrl: string;
-  isRunning: boolean;
+  private consumer: Consumer;
+  private readonly logger = new Logger(SqsConsumerService.name);
 
   constructor(
     private readonly videoService: VideoService,
     private readonly configService: ConfigService,
-    private awsSqs: AwsSqsService,
-  ) {
-    this.sqsClient = new SQSClient({
-      region: this.configService.get<string>('AWS_REGION'),
-      endpoint: this.configService.get<string>('AWS_SQS_QUEUE'),
-      credentials: {
-        accessKeyId: this.configService.get<string>('AWS_ACCESS_KEY_ID'),
-        secretAccessKey: this.configService.get<string>(
-          'AWS_SECRET_ACCESS_KEY',
-        ),
-        sessionToken: this.configService.get<string>('AWS_SESSION_TOKEN'),
-      },
-    });
-  }
+  ) {}
 
   private readonly AWS_BUCKET_NAME_VIDEO = this.configService.get<string>(
     'AWS_BUCKET_NAME_VIDEO',
   );
+  private readonly AWS_SQS_QUEUE = this.configService.get<string>(
+    'AWS_SQS_QUEUE',
+  );
 
-  async onModuleInit() {
-    this.isRunning = true;
-    this.listenToQueue();
+
+  onModuleInit() {
+    this.handleInitConsumer();
   }
 
-  async onModuleDestroy() {
-    this.isRunning = false;
-  }
-
-  async listenToQueue() {
-    while (this.isRunning) {
-      try {
-        // Recebe mensagens da fila
-        const command = new ReceiveMessageCommand({
-          QueueUrl: this.queueUrl,
-          MaxNumberOfMessages: 10, // Máximo de mensagens por chamada
-          WaitTimeSeconds: 10, // Long polling
-        });
-
-        const response = await this.sqsClient.send(command);
-
-        if (response.Messages) {
-          for (const message of response.Messages) {
-            // Processa a mensagem
-            await this.processMessage(message.Body);
-            await this.awsSqs.deleteMessage(this.queueUrl, message.ReceiptHandle)
-          }
-        }
-      } catch (error) {
-        console.error('Erro ao consumir mensagens da SQS:', error);
-      }
+  onModuleDestroy() {
+    if (this.consumer) {
+      this.consumer.stop();
     }
   }
 
+  private handleInitConsumer() {
+    this.consumer = Consumer.create({
+      queueUrl: this.AWS_SQS_QUEUE,
+      handleMessage: async (message) => this.processMessage(message?.Body),
+      batchSize: 10,
+    });
+
+    this.consumer.on('error', (err) => this.logger.error(err.message));
+    this.consumer.on('processing_error', (err) =>
+      this.logger.error(err.message),
+    );
+    this.consumer.on('timeout_error', (err) => this.logger.error(err.message));
+
+    this.consumer.start();
+  }
+
   private async processMessage(messageBody: string): Promise<void> {
+    this.logger.log('🚀 started consumer');
     const parseMessage = JSON.parse(messageBody);
     const { key } = parseMessage;
 
-    await this.videoService.downloadAndProcessVideo(
+    return await this.videoService.downloadAndProcessVideo(
       this.AWS_BUCKET_NAME_VIDEO,
       key,
     );
