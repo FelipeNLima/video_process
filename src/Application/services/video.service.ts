@@ -27,6 +27,8 @@ export class VideoService {
     this.configService.get<string>('AWS_QUEUE_RETURN');
   private readonly AWS_SNS_TOPIC_ARN =
     this.configService.get<string>('AWS_SNS_TOPIC_ARN');
+  private readonly AWS_REGION =
+    this.configService.get<string>('AWS_REGION');
 
   async processVideo(video: videoDto): Promise<any> {
     const { outputDir, file: fileRequest, zipPath } = video;
@@ -70,9 +72,10 @@ export class VideoService {
   }
 
   async downloadAndProcessVideo(bucket: string, key: string) {
-    const filePath = await this.awsS3.getFromS3Bucket(key, bucket);
-    const outputDir = join(__dirname, '..', '..', 'frames');
-    const zipPath = join(__dirname, '..', '..', 'output.zip');
+    try {
+      const filePath = await this.awsS3.getFromS3Bucket(key, bucket);
+    const outputDir = join(__dirname, '..', '..',  `frames-${key}`);
+    const zipPath = join(__dirname, '..', '..', `output-${key}.zip`);
 
     const { fileContent} = await this.videoRepository.processVideo(
       filePath,
@@ -89,18 +92,17 @@ export class VideoService {
       this.AWS_BUCKET_NAME_ZIP,
     );
     this.logger.log(`✅ saved to Bucket file in .Zip`)
+    this.logger.log(`URL - https://${this.AWS_BUCKET_NAME_ZIP}.s3.${this.AWS_REGION}.amazonaws.com/${s3Key}`)
 
-    // Send Key of Bucket
-    await this.awsSqs.sendMessage({key: s3Key, bucketName: this.AWS_BUCKET_NAME_ZIP }, this.AWS_QUEUE_RETURN);
-    this.logger.log(`✅ send file zip in Queue`)
-
+    } catch (error) {
     // Send Email
     const params = {
-      Subject: "Arquivo Zipado com sucesso",
-      Message: "O seu video foi processado com sucesso",
+      Subject: "Erro ao processar o video",
+      Message: "O seu video não foi processo, por favor entrar em contato com o time de suporte!",
       TopicArn: this.AWS_SNS_TOPIC_ARN,
     }
     this.logger.log(`✅ send to e-mail for client`)
     await this.awsSns.sendEmail(params)
+    }
   }
 }

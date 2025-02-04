@@ -12,11 +12,11 @@ export class AwsSnsService {
     this.snsClient = new SNSClient({
       region: this.configService.get<string>('AWS_REGION'),
       credentials: {
-        accessKeyId: this.configService.get<string>('AWS_ACCESS_KEY_ID'),
+        accessKeyId: this.configService.get<string>('aws_access_key_id_sns'),
         secretAccessKey: this.configService.get<string>(
-          'AWS_SECRET_ACCESS_KEY',
+          'aws_secret_access_key_sns',
         ),
-        sessionToken: this.configService.get<string>('AWS_SESSION_TOKEN'),
+        sessionToken: this.configService.get<string>('aws_session_token_sns'),
       },
     });
   }

@@ -11,10 +11,8 @@ import { Readable } from 'stream';
 
 @Injectable()
 export class AwsS3Service {
-  s3Client: S3Client
-  constructor(
-    private readonly configService: ConfigService,
-  ) {
+  s3Client: S3Client;
+  constructor(private readonly configService: ConfigService) {
     this.s3Client = new S3Client({
       region: this.configService.get<string>('AWS_REGION'),
       credentials: {
@@ -40,11 +38,11 @@ export class AwsS3Service {
         Key: fileName, // Filename in the S3 bucket
         Body: fileContent, // The ZIP file content
         ContentType: 'application/zip', // MIME type for ZIP files
+        Acl: 'public-read',
       };
 
       // Upload the ZIP file to S3
       await this.s3Client.send(new PutObjectCommand(bucketParams));
-      return `File uploaded successfully to ${bucketName}/${fileName}`;
     } catch (err) {
       throw new Error('Upload failed');
     }

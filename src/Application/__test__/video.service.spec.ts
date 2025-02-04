@@ -127,10 +127,6 @@ describe('VideoService', () => {
         `file-${format(new Date(), 'dd-MM-yyyy')}-mock-uuid.zip`,
         'test-bucket',
       );
-      expect(awsSqs.sendMessage).toHaveBeenCalledWith(
-        { key: expect.any(String), bucketName: 'test-bucket' },
-        'test-queue',
-      );
       expect(awsSns.sendEmail).toHaveBeenCalledWith({
         Subject: 'Arquivo Zipado com sucesso',
         Message: 'O seu video foi processado com sucesso',
@@ -161,10 +157,6 @@ describe('VideoService', () => {
         Buffer.from('zip-content'),
         `file-${format(new Date(), 'dd-MM-yyyy')}-mock-uuid.zip`,
         'test-bucket',
-      );
-      expect(awsSqs.sendMessage).toHaveBeenCalledWith(
-        { key: expect.any(String), bucketName: 'test-bucket' },
-        'test-queue',
       );
       expect(awsSns.sendEmail).toHaveBeenCalled();
     });
