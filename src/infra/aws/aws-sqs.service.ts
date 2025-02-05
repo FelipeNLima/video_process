@@ -8,12 +8,12 @@ import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AwsSqsService {
+  private readonly logger = new Logger(AwsSqsService.name);
   sqsClient: SQSClient;
 
   constructor(private readonly configService: ConfigService) {
     this.sqsClient = new SQSClient({
       region: this.configService.get<string>('AWS_REGION'),
-      endpoint: this.configService.get<string>('AWS_URL'),
       credentials: {
         accessKeyId: this.configService.get<string>('AWS_ACCESS_KEY_ID') || '',
         secretAccessKey: this.configService.get<string>('AWS_SECRET_ACCESS_KEY') || '',
@@ -22,7 +22,7 @@ export class AwsSqsService {
     });
   }
 
-  private readonly logger = new Logger(AwsSqsService.name);
+
   async sendMessage(message: any, queueUrl: string) {
     try {
       const params = {
