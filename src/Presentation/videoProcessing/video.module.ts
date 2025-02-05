@@ -11,7 +11,13 @@ import { VideoController } from './video.controller';
 @Module({
   imports: [TypeOrmModule.forFeature([Video])],
   controllers: [VideoController],
-  providers: [VideoService, VideoRepository, AwsS3Service, AwsSqsService, AwsSnsService], 
-  exports: [VideoService, VideoRepository, TypeOrmModule], 
+  providers: [
+    VideoService,
+    { provide: VideoRepository, useClass: VideoRepository },
+    AwsS3Service,
+    AwsSqsService,
+    AwsSnsService,
+  ],
+  exports: [VideoService, VideoRepository, TypeOrmModule],
 })
 export class VideoModule {}

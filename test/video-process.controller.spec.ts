@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Response } from 'express';
 import * as path from 'path';
 import { VideoService } from 'src/Application/services/video.service';
-import { VideoController } from '../videoProcessing/video.controller';
+import { VideoController } from 'src/Presentation/videoProcessing/video.controller';
 
 describe('VideoController', () => {
   let controller: VideoController;
@@ -47,8 +47,8 @@ describe('VideoController', () => {
 
       expect(videoService.processVideo).toHaveBeenCalledWith({
         file: mockFile,
-        outputDir: path.join(__dirname, '..', '..', 'frames'),
-        zipPath: path.join(__dirname, '..', '..', 'output.zip'),
+        outputDir: path.join(__dirname, '..', '..', 'video_process', 'src', 'frames'),
+        zipPath: path.join(__dirname, '..', '..', 'video_process', 'src', 'output.zip'),
       });
       expect(mockRes.download).toHaveBeenCalledWith(mockZipPath);
     });

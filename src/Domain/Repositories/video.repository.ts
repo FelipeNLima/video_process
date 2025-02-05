@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as archiver from 'archiver';
 import * as ffmpeg from 'fluent-ffmpeg';
@@ -6,13 +6,14 @@ import * as fs from 'fs';
 import { AwsS3Service } from 'src/infra/aws/aws-s3.service';
 import { AwsSnsService } from 'src/infra/aws/aws-sns.service';
 import { AwsSqsService } from 'src/infra/aws/aws-sqs.service';
+import { CustomRepository } from 'src/infra/database/typeorm-ex.decorator';
 import { Video } from 'src/infra/typeorm/entities/video.entity';
 import { Readable } from 'stream';
 import { Repository } from 'typeorm';
 import { IReturnFile } from '../interfaces/returnFile.interface';
 
-@Injectable()
-export class VideoRepository {
+@CustomRepository(Video)
+export class VideoRepository extends Repository<Video> {
   constructor(
     @InjectRepository(Video)
     private readonly repository: Repository<Video>,
@@ -20,6 +21,7 @@ export class VideoRepository {
     private readonly awsSqs: AwsSqsService,
     private readonly awsSns: AwsSnsService,
   ) {
+    super(repository.target, repository.manager, repository.queryRunner);
   }
   private readonly logger = new Logger(VideoRepository.name);
 

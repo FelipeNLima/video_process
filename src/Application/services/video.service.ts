@@ -81,7 +81,7 @@ export class VideoService {
 
       // Save Zip at Bucket
       const date = format(new Date(), 'dd-MM-yyyy');
-      const s3Key = `file-${date}-${randomUUID()}.zip`;
+      const s3Key = `file-${date}-${key}.zip`;
       await this.videoRepository.sendToS3Bucket(
         fileContent,
         s3Key,

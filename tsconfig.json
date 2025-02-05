@@ -6,7 +6,8 @@
     "removeComments": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "allowSyntheticDefaultImports": true,
+    "allowSyntheticDefaultImports": false,
+    "strict": false,
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": "./",
@@ -15,12 +16,21 @@
     "strictNullChecks": false,
     "noImplicitAny": false,
     "strictBindCallApply": false,
-    "forceConsistentCasingInFileNames": false,
+    "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": false,
+    "esModuleInterop": false,
+    "resolveJsonModule": true,
+    "moduleResolution": "node",
     "types": [
-      "@cucumber/cucumber",
-    ]
+      "node",
+      "jest",
+    ],
+    "typeRoots": [
+      "node_modules/@types"
+    ],
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }

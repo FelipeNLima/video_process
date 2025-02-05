@@ -2,8 +2,8 @@ import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as fs from 'fs';
+import { AwsS3Service } from 'src/infra/aws/aws-s3.service';
 import { Readable } from 'stream';
-import { AwsS3Service } from '../aws/aws-s3.service';
 
 // Mock AWS SDK
 jest.mock('@aws-sdk/client-s3');

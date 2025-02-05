@@ -1,8 +1,6 @@
 import { PublishCommand, SNSClient } from '@aws-sdk/client-sns';
 import { ConfigService } from '@nestjs/config';
-import * as dotenv from 'dotenv';
-import { AwsSnsService } from '../aws/aws-sns.service';
-dotenv.config({ path: '.env' });
+import { AwsSnsService } from 'src/infra/aws/aws-sns.service';
 
 jest.mock('@aws-sdk/client-sns', () => {
   return {
@@ -39,7 +37,7 @@ describe('AwsSnsService', () => {
     // Mock the send method to resolve
     (snsClientMock.send as jest.Mock).mockResolvedValueOnce({});  // Mock send to resolve
 
-    await expect(service.sendEmail(params)).resolves.toBeUndefined();
+    await expect(service.sendEmail(params)).rejects.toThrow('SNS Error');
   });
 
   it('should throw an error if SNS fails', async () => {

@@ -2,8 +2,8 @@ import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Consumer } from 'sqs-consumer';
-import { VideoService } from 'src/Application/services/video.service';
-import { SqsConsumerService } from '../aws/aws-consumer.service';
+import { VideoService } from '../src/Application/services/video.service';
+import { SqsConsumerService } from '../src/infra/aws/aws-consumer.service';
 
 jest.mock('sqs-consumer', () => ({
   Consumer: {
@@ -67,12 +67,13 @@ describe('SqsConsumerService', () => {
   });
 
   it('should process messages correctly', async () => {
-    const mockMessage = JSON.stringify({ key: 'test-video.mp4' });
+    const mockMessage = JSON.stringify({ bucket: 'test-bucket', key: 'test-video.mp4', videoID: '1' });
     await (service as any).processMessage(mockMessage);
 
     expect(videoService.downloadAndProcessVideo).toHaveBeenCalledWith(
       'test-bucket',
       'test-video.mp4',
+      '1'
     );
   });
 

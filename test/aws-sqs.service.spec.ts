@@ -2,7 +2,7 @@ import { DeleteMessageCommand, SQSClient, SendMessageCommand } from '@aws-sdk/cl
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
-import { AwsSqsService } from '../aws/aws-sqs.service';
+import { AwsSqsService } from 'src/infra/aws/aws-sqs.service';
 
 jest.mock('@aws-sdk/client-sqs'); // Mock AWS SDK
 
