@@ -1,12 +1,12 @@
 {
   "compilerOptions": {
+    "target": "ES2021",
     "module": "commonjs",
     "declaration": true,
     "removeComments": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
-    "target": "ES2021",
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": "./",
@@ -16,6 +16,11 @@
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
-    "noFallthroughCasesInSwitch": false
-  }
+    "noFallthroughCasesInSwitch": false,
+    "types": [
+      "@cucumber/cucumber",
+    ]
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
 }

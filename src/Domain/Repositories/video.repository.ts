@@ -1,14 +1,37 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import * as archiver from 'archiver';
 import * as ffmpeg from 'fluent-ffmpeg';
 import * as fs from 'fs';
+import { AwsS3Service } from 'src/infra/aws/aws-s3.service';
+import { AwsSnsService } from 'src/infra/aws/aws-sns.service';
+import { AwsSqsService } from 'src/infra/aws/aws-sqs.service';
+import { Video } from 'src/infra/typeorm/entities/video.entity';
 import { Readable } from 'stream';
+import { Repository } from 'typeorm';
 import { IReturnFile } from '../interfaces/returnFile.interface';
 
 @Injectable()
 export class VideoRepository {
-  constructor() {}
+  constructor(
+    @InjectRepository(Video)
+    private readonly repository: Repository<Video>,
+    private readonly awsS3: AwsS3Service,
+    private readonly awsSqs: AwsSqsService,
+    private readonly awsSns: AwsSnsService,
+  ) {
+  }
   private readonly logger = new Logger(VideoRepository.name);
+
+  async updateStatus(videoID: string, url: string) {
+    try {
+      const response = await this.repository.update(videoID, { status: 'finality', zipURL: url })
+      return response
+    } catch (error) {
+      throw new Error('Error update DB')
+    }
+  }
+
   async processVideo(
     videoPath: string | Readable,
     outputDir: string,
@@ -62,5 +85,25 @@ export class VideoRepository {
     } catch (error) {
       throw new Error(error);
     }
+  }
+
+  async getFromS3Bucket(key: string, bucket: string) {
+    return await this.awsS3.getFromS3Bucket(key, bucket);
+  }
+
+  async sendToS3Bucket(fileContent: Buffer<ArrayBufferLike>, s3Key: string, queue: string) {
+    return await this.awsS3.sendToS3Bucket(
+      fileContent,
+      s3Key,
+      queue,
+    );
+  }
+
+  async sendToSqs(message: string, queue: string) {
+    return await this.awsSqs.sendMessage(message, queue);
+  }
+
+  async sendSnsEmail(params) {
+    return await this.awsSns.sendEmail(params)
   }
 }

@@ -1,4 +1,15 @@
 {
   "extends": "./tsconfig.json",
-  "exclude": ["node_modules", "test", "dist", "**/*spec.ts"]
+  "exclude": [
+    "node_modules",
+    "test",
+    "dist",
+    "**/*spec.ts"
+  ],
+  "requireModule": [
+    "ts-node/register"
+  ],
+  "require": [
+    "features/step-definitions/**/*.ts"
+  ]
 }

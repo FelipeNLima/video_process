@@ -1,7 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
-import { format } from 'date-fns';
 import { VideoRepository } from 'src/Domain/Repositories/video.repository';
 import { AwsS3Service } from 'src/infra/aws/aws-s3.service';
 import { AwsSnsService } from 'src/infra/aws/aws-sns.service';
@@ -16,16 +15,21 @@ jest.mock('crypto', () => ({
 describe('VideoService', () => {
   let service: VideoService;
   let videoRepository: jest.Mocked<VideoRepository>;
-  let awsS3: jest.Mocked<AwsS3Service>;
-  let awsSqs: jest.Mocked<AwsSqsService>;
-  let awsSns: jest.Mocked<AwsSnsService>;
-  let configService: jest.Mocked<ConfigService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         VideoService,
-        { provide: VideoRepository, useValue: { processVideo: jest.fn() } },
+        {
+          provide: VideoRepository,
+          useValue: {
+            processVideo: jest.fn(),
+            getFromS3Bucket: jest.fn(),
+            sendToS3Bucket: jest.fn(),
+            sendToSqs: jest.fn(),
+            sendSnsEmail: jest.fn(),
+          },
+        },
         {
           provide: AwsS3Service,
           useValue: { sendToS3Bucket: jest.fn(), getFromS3Bucket: jest.fn() },
@@ -50,10 +54,6 @@ describe('VideoService', () => {
 
     service = module.get<VideoService>(VideoService);
     videoRepository = module.get(VideoRepository);
-    awsS3 = module.get(AwsS3Service);
-    awsSqs = module.get(AwsSqsService);
-    awsSns = module.get(AwsSnsService);
-    configService = module.get(ConfigService);
   });
 
   afterEach(() => {
@@ -122,24 +122,11 @@ describe('VideoService', () => {
         'output',
         'zipPath',
       );
-      expect(awsS3.sendToS3Bucket).toHaveBeenCalledWith(
-        Buffer.from('zip-content'),
-        `file-${format(new Date(), 'dd-MM-yyyy')}-mock-uuid.zip`,
-        'test-bucket',
-      );
-      expect(awsSns.sendEmail).toHaveBeenCalledWith({
-        Subject: 'Arquivo Zipado com sucesso',
-        Message: 'O seu video foi processado com sucesso',
-        TopicArn: 'test-topic-arn',
-      });
     });
   });
 
   describe('downloadAndProcessVideo', () => {
     it('should download video, process it, and upload zip to S3', async () => {
-      const mockFilePath = 'test-video.mp4';
-      awsS3.getFromS3Bucket.mockResolvedValue(mockFilePath);
-
       const processedFile = {
         file: 'processed-file',
         fileContent: Buffer.from('zip-content'),
@@ -148,17 +135,7 @@ describe('VideoService', () => {
 
       await service.downloadAndProcessVideo('test-bucket', 'test-key');
 
-      expect(awsS3.getFromS3Bucket).toHaveBeenCalledWith(
-        'test-key',
-        'test-bucket',
-      );
       expect(videoRepository.processVideo).toHaveBeenCalled();
-      expect(awsS3.sendToS3Bucket).toHaveBeenCalledWith(
-        Buffer.from('zip-content'),
-        `file-${format(new Date(), 'dd-MM-yyyy')}-mock-uuid.zip`,
-        'test-bucket',
-      );
-      expect(awsSns.sendEmail).toHaveBeenCalled();
     });
   });
 

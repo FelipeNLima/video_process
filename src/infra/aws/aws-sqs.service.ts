@@ -15,11 +15,9 @@ export class AwsSqsService {
       region: this.configService.get<string>('AWS_REGION'),
       endpoint: this.configService.get<string>('AWS_URL'),
       credentials: {
-        accessKeyId: this.configService.get<string>('AWS_ACCESS_KEY_ID'),
-        secretAccessKey: this.configService.get<string>(
-          'AWS_SECRET_ACCESS_KEY',
-        ),
-        sessionToken: this.configService.get<string>('AWS_SESSION_TOKEN'),
+        accessKeyId: this.configService.get<string>('AWS_ACCESS_KEY_ID') || '',
+        secretAccessKey: this.configService.get<string>('AWS_SECRET_ACCESS_KEY') || '',
+        sessionToken: this.configService.get<string>('AWS_SESSION_TOKEN') || '',
       },
     });
   }

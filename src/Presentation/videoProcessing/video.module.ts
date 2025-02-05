@@ -1,18 +1,17 @@
 import { Module } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { VideoService } from 'src/Application/services/video.service';
 import { VideoRepository } from 'src/Domain/Repositories/video.repository';
-import { AwsModule } from 'src/infra/aws/aws.module';
+import { AwsS3Service } from 'src/infra/aws/aws-s3.service';
+import { AwsSnsService } from 'src/infra/aws/aws-sns.service';
+import { AwsSqsService } from 'src/infra/aws/aws-sqs.service';
+import { Video } from 'src/infra/typeorm/entities/video.entity';
 import { VideoController } from './video.controller';
 
 @Module({
-  imports: [AwsModule],
+  imports: [TypeOrmModule.forFeature([Video])],
   controllers: [VideoController],
-  providers: [
-    { provide: VideoRepository, useClass: VideoRepository },
-    VideoService,
-    ConfigService,
-  ],
-  exports: [VideoService],
+  providers: [VideoService, VideoRepository, AwsS3Service, AwsSqsService, AwsSnsService], 
+  exports: [VideoService, VideoRepository, TypeOrmModule], 
 })
 export class VideoModule {}
