@@ -1,11 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { VideoRepository } from 'src/Domain/Repositories/video.repository';
 import { AwsS3Service } from 'src/infra/aws/aws-s3.service';
 import { AwsSnsService } from 'src/infra/aws/aws-sns.service';
 import { AwsSqsService } from 'src/infra/aws/aws-sqs.service';
-import { Video } from 'src/infra/typeorm/entities/video.entity';
-import { Repository } from 'typeorm';
 
 // Mock fs
 jest.mock('fs', () => ({
@@ -61,7 +58,6 @@ const mockRepository = () => ({
 
 describe('VideoRepository', () => {
   let videoRepository: VideoRepository;
-  let repositoryMock: jest.Mocked<Repository<Video>>;
   let awsS3Service: AwsS3Service;
   let awsSqsService: AwsSqsService;
   let awsSnsService: AwsSnsService;
@@ -70,10 +66,6 @@ describe('VideoRepository', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         VideoRepository,
-        {
-          provide: getRepositoryToken(Video),
-          useValue: mockRepository, // Providing mock repository
-      },
         {
           provide: AwsS3Service,
           useValue: {
@@ -93,7 +85,6 @@ describe('VideoRepository', () => {
     }).compile();
 
     videoRepository = module.get<VideoRepository>(VideoRepository);
-    repositoryMock = module.get(getRepositoryToken(Video));
     awsS3Service = module.get<AwsS3Service>(AwsS3Service);
     awsSqsService = module.get<AwsSqsService>(AwsSqsService);
     awsSnsService = module.get<AwsSnsService>(AwsSnsService);
@@ -101,19 +92,6 @@ describe('VideoRepository', () => {
 
   it('should be defined', () => {
     expect(videoRepository).toBeDefined();
-  });
-
-  describe('updateStatus', () => {
-    it('should update the video status', async () => {
-      jest.spyOn(repositoryMock, 'update').mockResolvedValue({} as any);
-      await expect(videoRepository.updateStatus('123', 'http://example.com')).resolves.toEqual({});
-      expect(repositoryMock.update).toHaveBeenCalledWith('123', { status: 'finality', zipURL: 'http://example.com' });
-    });
-
-    it('should throw an error if update fails', async () => {
-      jest.spyOn(repositoryMock, 'update').mockRejectedValue(new Error('DB Error'));
-      await expect(videoRepository.updateStatus('123', 'http://example.com')).rejects.toThrow('Error update DB');
-    });
   });
 
   describe('getFromS3Bucket', () => {

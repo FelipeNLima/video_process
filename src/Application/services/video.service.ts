@@ -81,7 +81,8 @@ export class VideoService {
 
       // Save Zip at Bucket
       const date = format(new Date(), 'dd-MM-yyyy');
-      const s3Key = `file-${date}-${key}.zip`;
+      const newKey = key.replace('.mp4', '.zip')
+      const s3Key = `file-${date}-${newKey}`;
       await this.videoRepository.sendToS3Bucket(
         fileContent,
         s3Key,

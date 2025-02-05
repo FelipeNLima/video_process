@@ -76,7 +76,7 @@ describe('AwsS3Service', () => {
     it('should download a file from S3 and save it locally', async () => {
       const mockBucketName = 'test-bucket';
       const mockFileName = 'test.zip';
-      const mockFilePath = `uploads\\${mockFileName}`;
+      const mockFilePath = `uploads/${mockFileName}`;
       const mockFileStream = new Readable();
       mockFileStream.push('test file content');
       mockFileStream.push(null);
