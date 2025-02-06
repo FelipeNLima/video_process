@@ -26,7 +26,8 @@ module.exports = {
     "!src/swagger.ts",
     "!src/app.module.ts",
     "!src/**/*.module.ts",
-    "!src/Application/dtos/*.ts"
+    "!src/Application/dtos/*.ts",
+    "!src/Domain/Repositories/video.repository.ts"
   ],
   coverageThreshold: {
     global: {

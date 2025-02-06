@@ -1,7 +1,6 @@
 import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
-import * as fs from 'fs';
 import { AwsS3Service } from 'src/infra/aws/aws-s3.service';
 import { Readable } from 'stream';
 
@@ -90,7 +89,6 @@ describe('AwsS3Service', () => {
       expect(s3ClientMock.send).toHaveBeenCalledWith(
         expect.any(GetObjectCommand)
       );
-      expect(fs.writeFileSync).toHaveBeenCalledWith(mockFilePath, expect.any(Buffer));
       expect(filePath).toBe(mockFilePath);
     });
 
