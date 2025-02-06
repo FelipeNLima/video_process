@@ -16,7 +16,7 @@ module.exports = {
     ]
   },
   collectCoverage: true,
-  coverageDirectory: '../coverage',
+  coverageDirectory: 'coverage',
   coverageReporters: ['json', 'lcov', 'text', 'clover'],
   collectCoverageFrom: [
     "src/**/*.ts",
