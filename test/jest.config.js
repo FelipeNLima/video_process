@@ -27,7 +27,6 @@ module.exports = {
     "!src/app.module.ts",
     "!src/**/*.module.ts",
     "!src/Application/dtos/*.ts",
-    "!src/Domain/Repositories/video.repository.ts"
   ],
   coverageThreshold: {
     global: {
