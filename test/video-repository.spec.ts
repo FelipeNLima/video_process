@@ -3,6 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { VideoRepository } from 'src/Domain/Repositories/video.repository';
 import { AwsS3Service } from 'src/infra/aws/aws-s3.service';
 import { AwsSnsService } from 'src/infra/aws/aws-sns.service';
+import { AwsSqsService } from 'src/infra/aws/aws-sqs.service';
 import { Video } from 'src/infra/typeorm/entities/video.entity';
 import { Repository } from 'typeorm';
 
@@ -23,6 +24,7 @@ describe('VideoRepository', () => {
     let videoRepository: VideoRepository;
     let repository: Repository<Video>;
     let awsS3Service: AwsS3Service;
+    let awsSqsService: AwsSqsService;
     let awsSnsService: AwsSnsService;
 
     beforeEach(async () => {
@@ -41,6 +43,10 @@ describe('VideoRepository', () => {
                   },
                 },
                 {
+                  provide: AwsSqsService,
+                  useValue: { sendMessage: jest.fn() },
+                },
+                {
                   provide: AwsSnsService,
                   useValue: { sendEmail: jest.fn() },
                 },
@@ -49,6 +55,7 @@ describe('VideoRepository', () => {
 
         videoRepository = module.get<VideoRepository>(VideoRepository);
         awsS3Service = module.get<AwsS3Service>(AwsS3Service);
+        awsSqsService = module.get<AwsSqsService>(AwsSqsService);
         awsSnsService = module.get<AwsSnsService>(AwsSnsService);
         repository = module.get<Repository<Video>>(getRepositoryToken(Video));
     });
