@@ -91,12 +91,11 @@ describe('VideoService', () => {
   describe('downloadAndProcessVideo', () => {
     it('should download, process video, and update URL in DB', async () => {
       const date = format(new Date(), 'dd-MM-yyyy');
-      const mockVideoID = '123';
       const mockBucket = 'test-bucket';
-      const mockKey = 'test-key.mp4';
+      const mockKey = '123';
       const filePath = '/path/to/downloaded/file';
       const fileContent = 'processed-content';
-      const url = `https://test-bucket.s3.us-east-1.amazonaws.com/file-${date}-test-key.zip`;
+      const url = `https://test-bucket.s3.us-east-1.amazonaws.com/file-${date}-123.zip`;
 
       videoRepositoryMock.getFromS3Bucket = jest.fn().mockResolvedValue(filePath);
       videoRepositoryMock.processVideo = jest.fn().mockResolvedValue({ fileContent });
@@ -104,22 +103,21 @@ describe('VideoService', () => {
       videoRepositoryMock.updateStatus = jest.fn().mockResolvedValue(undefined);
       videoRepositoryMock.sendSnsEmail = jest.fn().mockResolvedValue(undefined);
 
-      await service.downloadAndProcessVideo(mockBucket, mockKey, mockVideoID);
+      await service.downloadAndProcessVideo(mockBucket, mockKey);
 
       expect(videoRepositoryMock.getFromS3Bucket).toHaveBeenCalledWith(mockKey, mockBucket);
       expect(videoRepositoryMock.processVideo).toHaveBeenCalledWith(filePath, expect.any(String), expect.any(String));
       expect(videoRepositoryMock.sendToS3Bucket).toHaveBeenCalled();
-      expect(videoRepositoryMock.updateStatus).toHaveBeenCalledWith(mockVideoID, url);
+      expect(videoRepositoryMock.updateStatus).toHaveBeenCalledWith(mockKey, url);
     });
 
     it('should handle errors gracefully and send an email on failure', async () => {
-      const mockVideoID = '123';
       const mockBucket = 'test-bucket';
-      const mockKey = 'test-key';
+      const mockKey = '123';
 
       videoRepositoryMock.getFromS3Bucket = jest.fn().mockRejectedValue(new Error('S3 error'));
 
-      await service.downloadAndProcessVideo(mockBucket, mockKey, mockVideoID);
+      await service.downloadAndProcessVideo(mockBucket, mockKey);
 
       expect(videoRepositoryMock.sendSnsEmail).toHaveBeenCalledWith({
         Subject: 'Erro ao processar o video',

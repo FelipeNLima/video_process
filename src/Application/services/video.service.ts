@@ -67,7 +67,7 @@ export class VideoService {
     return file;
   }
 
-  async downloadAndProcessVideo(bucket: string, key: string, videoID: string) {
+  async downloadAndProcessVideo(bucket: string, key: string) {
     try {
       const filePath = await this.videoRepository.getFromS3Bucket(key, bucket);
       const outputDir = join(__dirname, '..', '..', `frames-${key}`);
@@ -81,8 +81,8 @@ export class VideoService {
 
       // Save Zip at Bucket
       const date = format(new Date(), 'dd-MM-yyyy');
-      const newKey = key.replace('.mp4', '.zip')
-      const s3Key = `file-${date}-${newKey}`;
+      //const newKey = key.replace('.mp4', '.zip')
+      const s3Key = `file-${date}-${key}.zip`;
       await this.videoRepository.sendToS3Bucket(
         fileContent,
         s3Key,
@@ -91,9 +91,10 @@ export class VideoService {
       this.logger.log(`✅ saved to Bucket file in .Zip`);
 
       const url = `https://${this.AWS_BUCKET_NAME_ZIP}.s3.${this.AWS_REGION}.amazonaws.com/${s3Key}`
-      await this.videoRepository.updateStatus(videoID, url)
+      await this.videoRepository.updateStatus(key, url)
       this.logger.log(`✅ Update status and URL in DB`, url);
     } catch (error) {
+      console.log(error)
       // Send Email
       const params = {
         Subject: 'Erro ao processar o video',

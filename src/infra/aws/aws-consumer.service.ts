@@ -48,14 +48,13 @@ export class SqsConsumerService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async processMessage(messageBody: string): Promise<void> {
-    this.logger.log('🚀 started consumer');
     const parseMessage = JSON.parse(messageBody);
-    const { key, videoID } = parseMessage;
+    const { key } = parseMessage;
+    this.logger.log('🚀 started consumer '+ key);
 
     return await this.videoService.downloadAndProcessVideo(
       this.AWS_BUCKET_NAME_VIDEO,
-      key,
-      videoID,
+      key
     );
   }
 }
