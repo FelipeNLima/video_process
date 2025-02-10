@@ -27,7 +27,6 @@ export class VideoRepository extends Repository<Video> {
 
   async updateStatus(videoID: string, url: string) {
     try {
-      console.log({videoID, url})
       const response = await this.repository.update(videoID, { status: 'finality', zipURL: url })
       return response
     } catch (error) {

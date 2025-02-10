@@ -99,7 +99,7 @@ export class VideoService {
       const params = {
         Subject: 'Erro ao processar o video',
         Message:
-          'O seu video não foi processo, por favor entrar em contato com o time de suporte!',
+          'O seu video não foi processado, por favor entrar em contato com o time de suporte!',
         TopicArn: this.AWS_SNS_TOPIC_ARN,
       };
       this.logger.log(`✅ send to e-mail for client`);
